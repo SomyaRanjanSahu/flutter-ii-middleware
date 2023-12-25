@@ -1,72 +1,111 @@
-import {
-  createActor,
-  ii_integration_backend,
-} from "../../declarations/ii_integration_backend";
+import { fromHex, toHex } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
-import { HttpAgent } from "@dfinity/agent";
-import { DelegationIdentity } from "@dfinity/identity";
-
-let actor = ii_integration_backend;
+import { Ed25519PublicKey, DelegationIdentity, ECDSAKeyIdentity, DelegationChain, fromHexString } from "@dfinity/identity";
 
 const loginButton = document.getElementById("login");
 const redirectToAppButton = document.getElementById("redirect");
 
+function getQueryParams() {
+  const queryParams = new URLSearchParams(window.location.search);
+  return {
+    publicKey: queryParams.get("sessionkey"),
+  }
+}
+
+// alert(getQueryParams().publicKey);
+console.log(getQueryParams().publicKey);
+
+const appPublicKey = Ed25519PublicKey.fromDer(fromHex(getQueryParams().publicKey));
+
+let delegationChain;
+
 loginButton.onclick = async (e) => {
   e.preventDefault();
-  let authClient = await AuthClient.create();
+
+  var middleKeyIdentity = await ECDSAKeyIdentity.generate();
+  let authClient = await AuthClient.create({
+    identity: middleKeyIdentity,
+  });
+
   await new Promise((resolve) => {
     authClient.login({
       identityProvider:
         process.env.DFX_NETWORK === "ic"
           ? "https://identity.ic0.app"
-          : `https://localhost:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`,
+          : `https://7fbd-122-179-100-169.ngrok-free.app/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`,
       onSuccess: () => {
         resolve;
         redirectToAppButton.removeAttribute("disabled");
         loginButton.setAttribute("disabled", true);
-        handleSuccessfulLogin(authClient);
+        handleSuccessfulLogin(authClient, middleKeyIdentity);
       },
     });
   });
   return false;
 };
 
-async function handleSuccessfulLogin(authClientInstance) {
-  const identity = authClientInstance.getIdentity();
-  const agent = new HttpAgent({ identity });
-  actor = createActor(process.env.CANISTER_ID_II_INTEGRATION_BACKEND, {
-    agent,
-  });
+async function handleSuccessfulLogin(authClientInstance, middleKeyIdentity) {
 
-  let authData = {
-    expiration: '',
-    pubkey: '',
-    signature: '',
-    principal: identity.getPrincipal().toString(),
-    status: 'true'
-  };
+  const middleIdentity = authClientInstance.getIdentity();
 
-  if (identity instanceof DelegationIdentity) {
-    const delegationChain = identity.getDelegation();
+  
+  console.log('middle identity', middleIdentity)
+  console.log('middle identity', middleIdentity.getPrincipal().toString())
 
-    // Check if there's at least one delegation
-    if (delegationChain && delegationChain.delegations && delegationChain.delegations.length > 0) {
-      const firstSignedDelegation = delegationChain.delegations[0];
-      const firstDelegation = firstSignedDelegation.delegation;
+  if (appPublicKey != null && middleIdentity instanceof DelegationIdentity) {
+    let middleToApp = await DelegationChain.create(
+      middleKeyIdentity,
+      appPublicKey,
+      new Date(Date.now() + 15 * 60 * 1000),
+      { previous: middleIdentity.getDelegation() },
+    );
 
-      // Converting BigInt to string for expiration
-      authData.expiration = firstDelegation.expiration.toString();
-      // Converting ArrayBuffer to hex string for public key
-      authData.pubkey = Buffer.from(firstDelegation.pubkey).toString('hex');
-      // Converting signature to hex string
-      authData.signature = Buffer.from(firstSignedDelegation.signature).toString('hex');
-    }
+    delegationChain = middleToApp;
   }
 
-  const queryString = `expiration=${authData.expiration}&pubkey=${authData.pubkey}&signature=${authData.signature}&principal=${authData.principal}&status=${authData.status}`;
+  alert("Principal :", middleIdentity.getPrincipal().toString());
 
-  redirectToAppButton.onclick = () => {
-    window.location.href = `auth://callback?${queryString}`;
+  var delegationString = JSON.stringify(
+    delegationChain.toJSON()
+  );
+
+  const encodedDelegation = encodeURIComponent(delegationString);
+    alert("encodedDelegation", encodedDelegation);
+  redirectToAppButton.onclick = async (e) => {
+    e.preventDefault();
+    window.location.href = `auth://callback?del=${encodedDelegation}`;
     loginButton.removeAttribute("disabled");
   };
+
 }
+
+
+  // console.log(middleKeyIdentity.toJSON());
+  // console.log(JSON.stringify(authClientInstance.getIdentity()));
+  // console.log(authClientInstance.getIdentity());
+
+  // console.log(middleKeyIdentity.getPrincipal().toString());
+  // console.log(authClientInstance.getIdentity().getPrincipal().toString());
+
+  // const identity = authClientInstance.getIdentity();
+
+  
+
+  // var identityString = JSON.stringify(middleKeyIdentity.toJSON());
+
+  
+  // const encodedIdentity = encodeURIComponent(identityString);
+
+  // const chain = DelegationChain.fromJSON(
+  //   JSON.parse(decodeURIComponent(encodedDelegation))
+  // );
+
+  // const id = DelegationIdentity.fromDelegation(authClientInstance.getIdentity(), chain);
+  // console.log(id.getPrincipal().toString());
+  // console.log(id.getPublicKey().toDer());
+
+  // const newId = Ed25519KeyIdentity.generate(id.getPrincipal().toUint8Array());
+  // console.log(newId.getPrincipal().toString());
+  
+// }
+
