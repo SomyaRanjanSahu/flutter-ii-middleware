@@ -1,3 +1,14 @@
+### After setting up ngrok as mentioned in flutter repository, paste the link as mentioned below
+
+`[Line no 35] :` Replace the ngrok forwarding link (same link as in flutter app) in authClient.login(). 
+
+        process.env.DFX_NETWORK === "ic"
+        
+          ? "https://identity.ic0.app"
+          : "https://7fbd-122-179-100-169.ngrok-free.app/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`",  
+
+
+
 # Commands to run
 
 - `npm install`
