@@ -1,10 +1,11 @@
-import { fromHex, toHex } from "@dfinity/agent";
+import { fromHex } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
-import { Ed25519PublicKey, DelegationIdentity, ECDSAKeyIdentity, DelegationChain, fromHexString } from "@dfinity/identity";
+import { Ed25519PublicKey, DelegationIdentity, ECDSAKeyIdentity, DelegationChain } from "@dfinity/identity";
 
 const loginButton = document.getElementById("login");
 const redirectToAppButton = document.getElementById("redirect");
 
+// Reciveing the session key from the URL
 function getQueryParams() {
   const queryParams = new URLSearchParams(window.location.search);
   return {
@@ -12,16 +13,17 @@ function getQueryParams() {
   }
 }
 
-// alert(getQueryParams().publicKey);
 console.log(getQueryParams().publicKey);
 
 const appPublicKey = Ed25519PublicKey.fromDer(fromHex(getQueryParams().publicKey));
 
 let delegationChain;
 
+// Login button
 loginButton.onclick = async (e) => {
   e.preventDefault();
 
+  // Creating a middle key indentity
   var middleKeyIdentity = await ECDSAKeyIdentity.generate();
   let authClient = await AuthClient.create({
     identity: middleKeyIdentity,
@@ -32,7 +34,7 @@ loginButton.onclick = async (e) => {
       identityProvider:
         process.env.DFX_NETWORK === "ic"
           ? "https://identity.ic0.app"
-          : `https://7fbd-122-179-100-169.ngrok-free.app/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`,
+          : `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943`,
       onSuccess: () => {
         resolve;
         redirectToAppButton.removeAttribute("disabled");
@@ -48,10 +50,10 @@ async function handleSuccessfulLogin(authClientInstance, middleKeyIdentity) {
 
   const middleIdentity = authClientInstance.getIdentity();
 
-  
-  console.log('middle identity', middleIdentity)
+  // Delegated Principal
   console.log('middle identity', middleIdentity.getPrincipal().toString())
 
+  // Creating Delegation Chain
   if (appPublicKey != null && middleIdentity instanceof DelegationIdentity) {
     let middleToApp = await DelegationChain.create(
       middleKeyIdentity,
@@ -63,14 +65,12 @@ async function handleSuccessfulLogin(authClientInstance, middleKeyIdentity) {
     delegationChain = middleToApp;
   }
 
-  alert("Principal :", middleIdentity.getPrincipal().toString());
-
   var delegationString = JSON.stringify(
     delegationChain.toJSON()
   );
 
   const encodedDelegation = encodeURIComponent(delegationString);
-    alert("encodedDelegation", encodedDelegation);
+
   redirectToAppButton.onclick = async (e) => {
     e.preventDefault();
     window.location.href = `auth://callback?del=${encodedDelegation}`;
@@ -78,34 +78,3 @@ async function handleSuccessfulLogin(authClientInstance, middleKeyIdentity) {
   };
 
 }
-
-
-  // console.log(middleKeyIdentity.toJSON());
-  // console.log(JSON.stringify(authClientInstance.getIdentity()));
-  // console.log(authClientInstance.getIdentity());
-
-  // console.log(middleKeyIdentity.getPrincipal().toString());
-  // console.log(authClientInstance.getIdentity().getPrincipal().toString());
-
-  // const identity = authClientInstance.getIdentity();
-
-  
-
-  // var identityString = JSON.stringify(middleKeyIdentity.toJSON());
-
-  
-  // const encodedIdentity = encodeURIComponent(identityString);
-
-  // const chain = DelegationChain.fromJSON(
-  //   JSON.parse(decodeURIComponent(encodedDelegation))
-  // );
-
-  // const id = DelegationIdentity.fromDelegation(authClientInstance.getIdentity(), chain);
-  // console.log(id.getPrincipal().toString());
-  // console.log(id.getPublicKey().toDer());
-
-  // const newId = Ed25519KeyIdentity.generate(id.getPrincipal().toUint8Array());
-  // console.log(newId.getPrincipal().toString());
-  
-// }
-
