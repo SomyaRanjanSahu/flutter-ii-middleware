@@ -53,6 +53,9 @@ async function handleSuccessfulLogin(authClientInstance, middleKeyIdentity) {
   // Delegated Principal
   console.log('middle identity', middleIdentity.getPrincipal().toString())
 
+  document.getElementById("loginStatus").textContent = "You are logged in ✅";
+  document.getElementById("principalId").textContent = "ID: " + middleIdentity.getPrincipal().toString();
+
   // Creating Delegation Chain
   if (appPublicKey != null && middleIdentity instanceof DelegationIdentity) {
     let middleToApp = await DelegationChain.create(
