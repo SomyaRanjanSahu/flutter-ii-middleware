@@ -76,7 +76,7 @@ async function handleSuccessfulLogin(authClientInstance, middleKeyIdentity) {
 
   redirectToAppButton.onclick = async (e) => {
     e.preventDefault();
-    window.location.href = `auth://callback?del=${encodedDelegation}`;
+    window.location.href = `auth://callback/login?del=${encodedDelegation}`;
     loginButton.removeAttribute("disabled");
   };
 
