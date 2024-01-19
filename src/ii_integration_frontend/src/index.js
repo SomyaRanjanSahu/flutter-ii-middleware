@@ -61,7 +61,7 @@ async function handleSuccessfulLogin(authClientInstance, middleKeyIdentity) {
     let middleToApp = await DelegationChain.create(
       middleKeyIdentity,
       appPublicKey,
-      new Date(Date.now() + 15 * 60 * 1000),
+      new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
       { previous: middleIdentity.getDelegation() },
     );
 
