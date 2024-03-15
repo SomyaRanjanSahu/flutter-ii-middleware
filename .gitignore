@@ -22,6 +22,3 @@ dist/
 
 # environment variables
 .env
-
-# canister_id file
-canister_ids.json
